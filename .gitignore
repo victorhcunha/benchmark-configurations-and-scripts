@@ -1,0 +1,4 @@
+/master/*
+.ant-targets-build.xml
+
+!default/*
