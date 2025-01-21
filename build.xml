@@ -14,6 +14,10 @@
             <fileset dir="./default/">
             </fileset>
         </copy>
+
+        <replace dir="master" summary="true" token="${m}" value="${enviroment-prefix}" >
+            <include name="**/**/benchmark-ext.properties"/>
+        </replace>
         
 
     </target>
@@ -33,5 +37,7 @@
         </copy>
 
     </target>
+
+	
 
 </project>
