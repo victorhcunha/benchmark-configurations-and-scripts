@@ -31,7 +31,7 @@
 
     <target name="backup-master-scripts">
 
-        <copy todir="masterBackup">
+        <copy todir="masterBackup" failonerror="false">
             <fileset dir="./master/">
             </fileset>
         </copy>
