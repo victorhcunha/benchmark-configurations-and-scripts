@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+
+<project basedir="." default="default" name="benchmark scripts">
+	<description>The scripts to benchmark tool set for Liferay Portal</description>
+
+    <target name="create-master-scripts" depends="clean-master-scripts">
+        <property name="enviroment-prefix" value="mX"/>
+
+		<echo>Creating master scripts</echo>
+
+        <mkdir dir="master"/>
+
+        <copy todir="master">
+            <fileset dir="./default/">
+            </fileset>
+        </copy>
+        
+
+    </target>
+
+    <target name="clean-master-scripts" depends="backup-master-scripts">
+
+        <delete dir="./master" />
+        <mkdir dir="master"/>
+
+    </target>
+
+    <target name="backup-master-scripts">
+
+        <copy todir="masterBackup">
+            <fileset dir="./master/">
+            </fileset>
+        </copy>
+
+    </target>
+
+</project>
