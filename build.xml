@@ -2,37 +2,38 @@
 
 <project basedir="." default="default" name="benchmark scripts">
 	<description>The scripts to benchmark tool set for Liferay Portal</description>
+    <property name="folder-name" value="master"/>
+    <property name="enviroment-prefix" value="mX"/>
 
-    <target name="create-master-scripts" depends="clean-master-scripts">
-        <property name="enviroment-prefix" value="mX"/>
+    <target name="create-folder-scripts" depends="clean-folder-scripts">
 
 		<echo>Creating master scripts</echo>
 
-        <mkdir dir="master"/>
+        <mkdir dir="${folder-name}"/>
 
-        <copy todir="master">
+        <copy todir="${folder-name}">
             <fileset dir="./default/">
             </fileset>
         </copy>
 
-        <replace dir="master" summary="true" token="${m}" value="${enviroment-prefix}" >
+        <replace dir="${folder-name}" summary="true" token="${m}" value="${enviroment-prefix}" >
             <include name="**/**/benchmark-ext.properties"/>
         </replace>
         
 
     </target>
 
-    <target name="clean-master-scripts" depends="backup-master-scripts">
+    <target name="clean-folder-scripts" depends="backup-folder-scripts">
 
-        <delete dir="./master" />
-        <mkdir dir="master"/>
+        <delete dir="./${folder-name}" />
+        <mkdir dir="${folder-name}"/>
 
     </target>
 
-    <target name="backup-master-scripts">
+    <target name="backup-folder-scripts">
 
-        <copy todir="masterBackup" failonerror="false">
-            <fileset dir="./master/">
+        <copy todir="${folder-name}Backup" failonerror="false">
+            <fileset dir="./${folder-name}/">
             </fileset>
         </copy>
 
