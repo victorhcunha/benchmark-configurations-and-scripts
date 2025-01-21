@@ -1,4 +1,6 @@
-/master/*
+*/*
+*.tar
 .ant-targets-build.xml
 
 !default/*
+!*.rb
