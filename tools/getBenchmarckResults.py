@@ -161,6 +161,28 @@ def extract_grinder_results(data,rows=["Instant Session Waiting Time"],sample=-1
 
     return results
 
+def extract_portal_cg_results (zip_path):
+    file_content = extract_file_content(zip_path, "portal/logs/portal-gc.log.results")
+
+    results = {}
+
+    for line in file_content.strip().splitlines():
+        if ":" in line:
+            key, value = line.split(":", 1)
+            parts = value.strip().split(maxsplit=1)
+            num = float(parts[0])
+
+            suffix = parts[1] if len(parts) > 1 else ""
+
+            if suffix:
+                key = f"{key.strip()} ({suffix})"
+            else:
+                key = key.strip()
+
+            results[key] = num
+
+    return results
+
 def save_to_csv(data, filename, columns_list):
     with open(filename, mode='w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
@@ -175,7 +197,7 @@ def save_to_csv(data, filename, columns_list):
 
         writer.writerow(results_line)
 
-columns_list = ["Date", "Portal Version", "Benchmark Version", "Benchmark Config","Session Count","Percentage Change (%)","Meantime of Login","Error or exception in catalina.out", "WARN in catalina.out", "Grinder error","Result archive file name","Grinder 图","Meantime Specific Step", "Instant Session Waiting Time","DB CPU Usage","ES CPU Usage","Portal CPU Usage","Total Allocations (MB)","Average Allocation Rate (MB/s)","Total G1 Evacuation Pause count","Total Concurrent GC count","The Max Young GC Pause Time (MS)"]
+columns_list = ["Date", "Portal Version", "Benchmark Version", "Benchmark Config","Session Count","Percentage Change (%)","Meantime of Login","Error or exception in catalina.out", "WARN in catalina.out", "Grinder error","Result archive file name","Grinder 图","Meantime Specific Step", "Instant Session Waiting Time","DB CPU Usage","ES CPU Usage","Portal CPU Usage","Total Allocations (MB)","Average Allocation Rate (MB/S)","Total G1 Evacuation Pause count","Total Concurrent GC count","The Max Young GC Pause Time (ms)"]
 
 test_cases_steps = {
     "content": ["View Page"],
@@ -208,5 +230,6 @@ steps.append("Instant Session Waiting Time")
 save_to_csv((extract_summary_data_from_string(extract_file_content(zip_path,'summary.log'))) |
             (extract_logs_from_summary(columns_list)) |
             (extract_grinder_results(extract_file_content(zip_path,'grinder/logs/grinder.log'),steps)) |
-            (extract_system_usage(columns_list))
+            (extract_system_usage(columns_list)) |
+            (extract_portal_cg_results(zip_path))
             ,"benchmarck_results.csv",columns_list)
