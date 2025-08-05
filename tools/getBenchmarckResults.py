@@ -2,6 +2,10 @@ import sys
 from zipfile import ZipFile
 import io
 import csv
+import cv2
+import numpy as np
+from grinderTendency import analyze_session_trend
+
 
 zip_path = ''
 
@@ -117,6 +121,8 @@ def get_last_us_values_from_string(content, us_column_index=12, position="last_t
     last_three = [int(row[us_column_index]) for row in data_lines[-3:]]
     return last_three
 
+def get_grinder_tendency(zip_path, file_path="grinder/logs/addtionalDataImage.jpg"):
+    return {"Grinder 图": analyze_session_trend(zip_path, file_path)}
 
 def extract_system_usage(columns_list):
 
@@ -229,6 +235,7 @@ steps.append("Instant Session Waiting Time")
 
 save_to_csv((extract_summary_data_from_string(extract_file_content(zip_path,'summary.log'))) |
             (extract_logs_from_summary(columns_list)) |
+            (get_grinder_tendency(zip_path)) |
             (extract_grinder_results(extract_file_content(zip_path,'grinder/logs/grinder.log'),steps)) |
             (extract_system_usage(columns_list)) |
             (extract_portal_cg_results(zip_path))
