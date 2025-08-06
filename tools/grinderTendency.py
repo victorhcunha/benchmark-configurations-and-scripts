@@ -11,7 +11,7 @@ def load_and_crop_image(image, top_half=True):
     height = image.shape[0]
     width = image.shape[1]
     if top_half:
-        return image[0:height // 2, :][:, width // 2:]
+        return image[0:height // 3, :][:, width // 2:]
     else:
         return image[height // 2:, :]
 
@@ -95,7 +95,7 @@ def get_session_trend(image):
             blue_slope = -blue_slope
 
             if abs(blue_slope) > 0.03:  # Not flat (avoid false 0.0 due to noise)
-                plot_trend(top_chart, xs_blue, blue_model, f'Blue Line Trend (slope: {blue_slope:.2f})', output_path="trend.png")
+                plot_trend(top_chart, xs_blue, blue_model, f'Blue Line Trend (slope: {blue_slope:.2f})', output_path="tendency.png")
                 return analyze_trend_slope(blue_slope)
 
     print("Blue slope is 0.0 or data is insufficient. Falling back to red line.")
@@ -112,7 +112,7 @@ def get_session_trend(image):
     # Invert the slope sign for the red line as well
     red_slope = -red_slope
 
-    plot_trend(top_chart, xs_red, red_model, f'Red Line Trend (slope: {red_slope:.2f})', output_path="trend.png")
+    plot_trend(top_chart, xs_red, red_model, f'Red Line Trend (slope: {red_slope:.2f})', output_path="tendency.png")
     return analyze_trend_slope(red_slope)
 
 
