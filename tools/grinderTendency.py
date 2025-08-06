@@ -11,7 +11,7 @@ def load_and_crop_image(image, top_half=True):
     height = image.shape[0]
     width = image.shape[1]
     if top_half:
-        return image[0:height // 3, :][:, width // 2:]
+        return image[0:height // 4, 2 * width // 5:]
     else:
         return image[height // 2:, :]
 
