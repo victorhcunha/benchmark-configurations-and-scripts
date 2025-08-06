@@ -65,6 +65,9 @@ end
 class Commerce < Login
 end
 
+class Organization < Login
+end
+
 class Blog < MessageBoard
 end
 
@@ -117,6 +120,8 @@ def get_case(test_case, benchmark_path, test_case_path)
 		AssetPublisher.new(benchmark_path, test_case_path)
 	elsif test_case.include? "commerce"
 		Commerce.new(benchmark_path, test_case_path)
+	elsif test_case.include? "organization"
+		Organization.new(benchmark_path, test_case_path)
 	end
 end
 
