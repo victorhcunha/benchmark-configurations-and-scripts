@@ -205,38 +205,40 @@ def save_to_csv(data, filename, columns_list):
 
 columns_list = ["Date", "Portal Version", "Benchmark Version", "Benchmark Config","Session Count","Percentage Change (%)","Meantime of Login","Error or exception in catalina.out", "WARN in catalina.out", "Grinder error","Result archive file name","Grinder 图","Meantime Specific Step", "Instant Session Waiting Time","DB CPU Usage","ES CPU Usage","Portal CPU Usage","Total Allocations (MB)","Average Allocation Rate (MB/S)","Total G1 Evacuation Pause count","Total Concurrent GC count","The Max Young GC Pause Time (ms)"]
 
-test_cases_steps = {
-    "content": ["View Page"],
-    "login": ["Log out"],
-    "login1": ["Log out"],
-    "objectDefinition": ["View Object Definition Page"],
-    "documentlibrary": ["Add DL File"],
-    "assetpublisher": ["View Page Without Filter", "View Page With Filter"]
-}
+def test_case_specific_steps():
+    test_cases_steps = {
+        "content": ["View Page"],
+        "login": ["Log out"],
+        "login1": ["Log out"],
+        "objectDefinition": ["View Object Definition Page"],
+        "documentlibrary": ["Add DL File"],
+        "assetpublisher": ["View Page Without Filter", "View Page With Filter"]
+    }
 
-file_name_parts = zip_path.split("/")[-1].split("-")
+    file_name_parts = zip_path.split("/")[-1].split("-")
 
-for i in file_name_parts[::-1]:
-    if i in test_cases_steps:
-        test_case = i
-        steps = test_cases_steps[test_case]
-        break
+    for i in file_name_parts[::-1]:
+        if i in test_cases_steps:
+            test_case = i
+            steps = test_cases_steps[test_case]
+            break
 
-if "Meantime Specific Step" in columns_list:
-    index = columns_list.index("Meantime Specific Step")
-    columns_list.pop(index)
+    if "Meantime Specific Step" in columns_list:
+        index = columns_list.index("Meantime Specific Step")
+        columns_list.pop(index)
 
-    for item in reversed(steps):
-        if item not in columns_list:
-            columns_list.insert(index, item)
+        for item in reversed(steps):
+            if item not in columns_list:
+                columns_list.insert(index, item)
 
+    steps.append("Instant Session Waiting Time")
 
-steps.append("Instant Session Waiting Time")
+    return steps
 
 save_to_csv((extract_summary_data_from_string(extract_file_content(zip_path,'summary.log'))) |
             (extract_logs_from_summary(columns_list)) |
             (get_grinder_tendency(zip_path)) |
-            (extract_grinder_results(extract_file_content(zip_path,'grinder/logs/grinder.log'),steps)) |
+            (extract_grinder_results(extract_file_content(zip_path,'grinder/logs/grinder.log'),test_case_specific_steps())) |
             (extract_system_usage(columns_list)) |
             (extract_portal_cg_results(zip_path))
             ,"benchmarck_results.csv",columns_list)
