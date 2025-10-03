@@ -232,12 +232,12 @@ def test_case_specific_steps():
 
 	steps.append("Instant Session Waiting Time")
 
-	return steps
+	return steps,test_case
 
 save_to_csv((extract_summary_data_from_string(extract_file_content(zip_path,'summary.log'))) |
 			(extract_logs_from_summary(columns_list)) |
 			(get_grinder_tendency(zip_path)) |
-			(extract_grinder_results(extract_file_content(zip_path,'grinder/logs/grinder.log'),test_case_specific_steps())) |
+			(extract_grinder_results(extract_file_content(zip_path,'grinder/logs/grinder.log'),test_case_specific_steps()[0])) |
 			(extract_system_usage(columns_list)) |
 			(extract_portal_cg_results(zip_path))
-			,"benchmarck_results.csv",columns_list)
+			,test_case_specific_steps()[1] + "_benchmarck_results.csv",columns_list)
