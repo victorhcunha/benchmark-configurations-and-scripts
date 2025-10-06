@@ -5,6 +5,7 @@ import csv
 import cv2
 import io
 import numpy as np
+import os
 from grinderTendency import analyze_session_trend
 
 zip_path = ''
@@ -191,7 +192,9 @@ def get_last_us_values_from_string(content, us_column_index=12, position="last_t
 def save_to_csv(data, filename, columns_list):
 	with open(filename, mode='a', newline='', encoding='utf-8') as file:
 		writer = csv.writer(file)
-		writer.writerow(columns_list)
+
+		if not os.path.exists(filename) or os.path.getsize(filename) == 0:
+			writer.writerow(columns_list)
 
 		results_line = []
 		for column in columns_list:
