@@ -189,7 +189,7 @@ def get_last_us_values_from_string(content, us_column_index=12, position="last_t
 	return last_three
 
 def save_to_csv(data, filename, columns_list):
-	with open(filename, mode='w', newline='', encoding='utf-8') as file:
+	with open(filename, mode='a', newline='', encoding='utf-8') as file:
 		writer = csv.writer(file)
 		writer.writerow(columns_list)
 
