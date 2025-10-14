@@ -46,14 +46,16 @@ def extract_grinder_results(data,rows=["Instant Session Waiting Time"],sample=-1
 def extract_logs_from_summary(columns_list):
 
 	results = {
-		"Error or exception in catalina.out": None,
-		"WARN in catalina.out": None,
+		"Error or exception": None,
+		"WARN in": None,
 		"Grinder error": None
 	}
 
 	for log in results:
-		if log in columns_list:
-			results[log] = extract_section_from_text(extract_file_content(zip_path,'summary.log'),keyword=log)
+		results[log] = extract_section_from_text(extract_file_content(zip_path,'summary.log'),keyword=log)
+
+	results["Error or exception in catalina.out"] = results.pop("Error or exception")
+	results["WARN in catalina.out"] = results.pop("WARN in")
 
 	return results
 
