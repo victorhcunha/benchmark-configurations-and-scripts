@@ -7,6 +7,7 @@ import io
 import numpy as np
 import os
 from grinderTendency import analyze_session_trend
+import requests
 
 zip_path = ''
 
@@ -144,6 +145,18 @@ def extract_summary_data_from_string(log_content):
 
 	return results
 
+def merged_date(portal_version):
+	url = f"https://api.github.com/repos/brianchandotcom/liferay-portal/commits/{portal_version}"
+
+	response = requests.get(url)
+	response.raise_for_status()
+
+	data = response.json()
+
+	full_date = data["commit"]["committer"]["date"]
+
+	return  {"Merged Date": full_date.split("T")[0]}
+
 def extract_system_usage(columns_list):
 
 	results = {
@@ -207,7 +220,7 @@ def save_to_csv(data, filename, columns_list):
 
 		writer.writerow(results_line)
 
-columns_list = ["Date", "Portal Version", "Benchmark Version", "Benchmark Config","Session Count","Percentage Change (%)","Meantime of Login","Error or exception in catalina.out", "WARN in catalina.out", "Grinder error","Result archive file name","Grinder 图","Meantime Specific Step", "Instant Session Waiting Time","DB CPU Usage","ES CPU Usage","Portal CPU Usage","Total Allocations (MB)","Average Allocation Rate (MB/S)","Total G1 Evacuation Pause count","Total Concurrent GC count","The Max Young GC Pause Time (ms)"]
+columns_list = ["Merged Date", "Portal Version", "Benchmark Version", "Benchmark Config","Session Count","Percentage Change (%)","Meantime of Login","Error or exception in catalina.out", "WARN in catalina.out", "Grinder error","Result archive file name","Grinder 图","Meantime Specific Step", "Instant Session Waiting Time","DB CPU Usage","ES CPU Usage","Portal CPU Usage","Total Allocations (MB)","Average Allocation Rate (MB/S)","Total G1 Evacuation Pause count","Total Concurrent GC count","The Max Young GC Pause Time (ms)"]
 
 def test_case_specific_steps():
 	test_cases_steps = {
@@ -239,7 +252,8 @@ def test_case_specific_steps():
 
 	return steps,test_case
 
-save_to_csv((extract_summary_data_from_string(extract_file_content(zip_path,'summary.log'))) |
+save_to_csv((merged_date(extract_summary_data_from_string(extract_file_content(zip_path,'summary.log'))["Portal Version"])) |
+			(extract_summary_data_from_string(extract_file_content(zip_path,'summary.log'))) |
 			(extract_logs_from_summary(columns_list)) |
 			(get_grinder_tendency(zip_path)) |
 			(extract_grinder_results(extract_file_content(zip_path,'grinder/logs/grinder.log'),test_case_specific_steps()[0])) |
