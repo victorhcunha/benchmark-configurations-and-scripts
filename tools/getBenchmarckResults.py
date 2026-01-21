@@ -157,6 +157,11 @@ def merged_date(portal_version):
 
 	return  {"Merged Date": full_date.split("T")[0]}
 
+def extract_ifstat_result(zip_path):
+	file_content = extract_file_content(zip_path, "portal/logs/portal-ifstat.log")
+
+	return {"portal-ifstat out (KB/s)": file_content.strip().splitlines()[-1].split()[-1]}
+
 def extract_system_usage(columns_list):
 
 	results = {
@@ -220,7 +225,7 @@ def save_to_csv(data, filename, columns_list):
 
 		writer.writerow(results_line)
 
-columns_list = ["Merged Date", "Portal Version", "Benchmark Version", "Benchmark Config","Session Count","Percentage Change (%)","Meantime of Login","Error or exception in catalina.out", "WARN in catalina.out", "Grinder error","Result archive file name","Grinder 图","Meantime Specific Step", "Instant Session Waiting Time","DB CPU Usage","ES CPU Usage","Portal CPU Usage","Total Allocations (MB)","Average Allocation Rate (MB/S)","Total G1 Evacuation Pause count","Total Concurrent GC count","The Max Young GC Pause Time (ms)"]
+columns_list = ["Merged Date", "Portal Version", "Benchmark Version", "Benchmark Config","Session Count","Percentage Change (%)","Meantime of Login","Error or exception in catalina.out", "WARN in catalina.out", "Grinder error","Result archive file name","Grinder 图","Meantime Specific Step", "Instant Session Waiting Time","DB CPU Usage","ES CPU Usage","Portal CPU Usage", "portal-ifstat out (KB/s)", "Total Allocations (MB)","Average Allocation Rate (MB/S)","Total G1 Evacuation Pause count","Total Concurrent GC count","The Max Young GC Pause Time (ms)"]
 
 def test_case_specific_steps():
 	test_cases_steps = {
@@ -258,5 +263,6 @@ save_to_csv((merged_date(extract_summary_data_from_string(extract_file_content(z
 			(get_grinder_tendency(zip_path)) |
 			(extract_grinder_results(extract_file_content(zip_path,'grinder/logs/grinder.log'),test_case_specific_steps()[0])) |
 			(extract_system_usage(columns_list)) |
+			(extract_ifstat_result(zip_path)) |
 			(extract_portal_cg_results(zip_path))
 			,test_case_specific_steps()[1] + "_benchmarck_results.csv",columns_list)
