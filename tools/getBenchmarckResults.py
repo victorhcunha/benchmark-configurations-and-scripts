@@ -61,7 +61,7 @@ def extract_logs_from_summary(columns_list):
 	return results
 
 def extract_portal_cg_results (zip_path):
-	file_content = extract_file_content(zip_path, "portal/logs/portal-gc.log.results")
+	file_content = extract_file_content(zip_path, "portals/m2portal1/logs/portal-gc.log.results")
 
 	results = {}
 
@@ -158,7 +158,7 @@ def merged_date(portal_version):
 	return  {"Merged Date": full_date.split("T")[0]}
 
 def extract_ifstat_result(zip_path):
-	file_content = extract_file_content(zip_path, "portal/logs/portal-ifstat.log")
+	file_content = extract_file_content(zip_path, "portals/m2portal1/logs/portal-ifstat.log")
 
 	return {"portal-ifstat out (KB/s)": file_content.strip().splitlines()[-1].split()[-1]}
 
@@ -179,7 +179,7 @@ def extract_system_usage(columns_list):
 			elif log == "ES CPU Usage":
 				content = extract_file_content(zip_path,'es/logs/elasticsearch-vmstat.log')
 			elif log == "Portal CPU Usage":
-				content = extract_file_content(zip_path,'portal/logs/portal-vmstat.log')
+				content = extract_file_content(zip_path,'portals/m2portal1/logs/portal-vmstat.log')
 			results[log] = get_last_us_values_from_string(content)
 
 	return results
