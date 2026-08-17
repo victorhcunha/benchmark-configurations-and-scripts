@@ -6,6 +6,7 @@ import cv2
 import io
 import numpy as np
 import os
+import re
 from grinderTendency import analyze_session_trend
 import requests
 
@@ -15,6 +16,27 @@ if len(sys.argv) > 1:
 	zip_path = sys.argv[1]
 else:
 	raise SystemExit("No file found")
+
+def get_portal_dir(zip_path, default="m2portal1"):
+	try:
+		with ZipFile(zip_path, 'r') as zip_file_content:
+			for name in zip_file_content.namelist():
+				match = re.match(r"portals/([^/]+)/", name)
+				if match:
+					return match.group(1)
+	except Exception:
+		pass
+
+	return default
+
+portal_dir = get_portal_dir(zip_path)
+
+def safe(func, default=None):
+	try:
+		return func()
+	except Exception as error:
+		print(f"Warning: {error}", file=sys.stderr)
+		return {} if default is None else default
 
 def extract_file_content(zip_path, file_path):
 	with ZipFile(zip_path, 'r') as zip_file_content:
@@ -52,8 +74,11 @@ def extract_logs_from_summary(columns_list):
 		"Grinder error": None
 	}
 
-	for log in results:
-		results[log] = extract_section_from_text(extract_file_content(zip_path,'summary.log'),keyword=log)
+	summary_content = safe(lambda: extract_file_content(zip_path, 'summary.log'), default="")
+
+	if summary_content:
+		for log in results:
+			results[log] = extract_section_from_text(summary_content,keyword=log)
 
 	results["Error or exception in catalina.out"] = results.pop("Error or exception")
 	results["WARN in catalina.out"] = results.pop("WARN in")
@@ -61,7 +86,7 @@ def extract_logs_from_summary(columns_list):
 	return results
 
 def extract_portal_cg_results (zip_path):
-	file_content = extract_file_content(zip_path, "portal/logs/portal-gc.log.results")
+	file_content = extract_file_content(zip_path, f"portals/{portal_dir}/logs/portal-gc.log.results")
 
 	results = {}
 
@@ -146,19 +171,22 @@ def extract_summary_data_from_string(log_content):
 	return results
 
 def merged_date(portal_version):
-	url = f"https://api.github.com/repos/brianchandotcom/liferay-portal/commits/{portal_version}"
 
-	response = requests.get(url)
-	response.raise_for_status()
+	full_date = "-"
+	# url = f"https://api.github.com/repos/brianchandotcom/liferay-portal/commits/{portal_version}"
 
-	data = response.json()
+	# response = requests.get(url)
+	# response.raise_for_status()
 
-	full_date = data["commit"]["committer"]["date"]
+	# data = response.json()
+
+	# full_date = data["commit"]["committer"]["date"]
+	full_date = "-"
 
 	return  {"Merged Date": full_date.split("T")[0]}
 
 def extract_ifstat_result(zip_path):
-	file_content = extract_file_content(zip_path, "portal/logs/portal-ifstat.log")
+	file_content = extract_file_content(zip_path, f"portals/{portal_dir}/logs/portal-ifstat.log")
 
 	return {"portal-ifstat out (KB/s)": file_content.strip().splitlines()[-1].split()[-1]}
 
@@ -170,17 +198,18 @@ def extract_system_usage(columns_list):
 		"Portal CPU Usage": None
 	}
 
-	content = ""
-
 	for log in results:
 		if log in columns_list:
-			if log == "DB CPU Usage":
-				content = extract_file_content(zip_path,'database/logs/db-vmstat.log')
-			elif log == "ES CPU Usage":
-				content = extract_file_content(zip_path,'es/logs/elasticsearch-vmstat.log')
-			elif log == "Portal CPU Usage":
-				content = extract_file_content(zip_path,'portal/logs/portal-vmstat.log')
-			results[log] = get_last_us_values_from_string(content)
+			try:
+				if log == "DB CPU Usage":
+					content = extract_file_content(zip_path,'database/logs/db-vmstat.log')
+				elif log == "ES CPU Usage":
+					content = extract_file_content(zip_path,'es/logs/elasticsearch-vmstat.log')
+				elif log == "Portal CPU Usage":
+					content = extract_file_content(zip_path,f'portals/{portal_dir}/logs/portal-vmstat.log')
+				results[log] = get_last_us_values_from_string(content)
+			except Exception as error:
+				print(f"Warning: {error}", file=sys.stderr)
 
 	return results
 
@@ -218,10 +247,13 @@ def save_to_csv(data, filename, columns_list):
 
 		results_line = []
 		for column in columns_list:
+			value = data.get(column)
+
 			if "Usage" in column:
-				results_line.append((",".join(map(str, data.get(column,"")))))
+				results_line.append(",".join(map(str, value)) if value else "-")
 				continue
-			results_line.append(data.get(column,""))
+
+			results_line.append(value if value not in (None, "") else "-")
 
 		writer.writerow(results_line)
 
@@ -234,7 +266,8 @@ def test_case_specific_steps():
 		"login1": ["Log out"],
 		"objectDefinition": ["View Object Definition Page"],
 		"documentlibrary": ["Add DL File"],
-		"assetpublisher": ["View Page Without Filter", "View Page With Filter"]
+		"assetpublisher": ["View Page Without Filter", "View Page With Filter"],
+		"objectEntry": ["View Object Definition Page"]
 	}
 
 	file_name_parts = zip_path.split("/")[-1].split("-")
@@ -257,12 +290,19 @@ def test_case_specific_steps():
 
 	return steps,test_case
 
-save_to_csv((merged_date(extract_summary_data_from_string(extract_file_content(zip_path,'summary.log'))["Portal Version"])) |
-			(extract_summary_data_from_string(extract_file_content(zip_path,'summary.log'))) |
-			(extract_logs_from_summary(columns_list)) |
-			(get_grinder_tendency(zip_path)) |
-			(extract_grinder_results(extract_file_content(zip_path,'grinder/logs/grinder.log'),test_case_specific_steps()[0])) |
-			(extract_system_usage(columns_list)) |
-			(extract_ifstat_result(zip_path)) |
-			(extract_portal_cg_results(zip_path))
-			,test_case_specific_steps()[1] + "_benchmarck_results.csv",columns_list)
+summary_data = safe(lambda: extract_summary_data_from_string(extract_file_content(zip_path,'summary.log')))
+steps, test_case = test_case_specific_steps()
+
+output_dir = "/home/liferay/storage/benchmark-result/master/"
+os.makedirs(output_dir, exist_ok=True)
+
+save_to_csv(
+			safe(lambda: merged_date(summary_data.get("Portal Version")), default={"Merged Date": "-"}) |
+			summary_data |
+			safe(lambda: extract_logs_from_summary(columns_list)) |
+			safe(lambda: get_grinder_tendency(zip_path), default={"Grinder 图": "-"}) |
+			safe(lambda: extract_grinder_results(extract_file_content(zip_path,'grinder/logs/grinder.log'),steps)) |
+			safe(lambda: extract_system_usage(columns_list)) |
+			safe(lambda: extract_ifstat_result(zip_path), default={"portal-ifstat out (KB/s)": "-"}) |
+			safe(lambda: extract_portal_cg_results(zip_path))
+			,os.path.join(output_dir, test_case + "_benchmarck_results.csv"),columns_list)
