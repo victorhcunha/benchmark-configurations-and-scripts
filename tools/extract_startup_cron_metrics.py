@@ -142,6 +142,55 @@ def extract_phase_metrics(section):
 	return metrics
 
 
+def parse_full_results(content):
+	# newer zips no longer bundle cron.log/runner.log in the phase sub-zips,
+	# only a single top-level fullResults.log with every metric already
+	# aggregated. Strip the trailing " = Possible regression, ..." note
+	# some lines carry before matching.
+	text = "\n".join(line.split(" = Possible regression")[0].strip() for line in content.splitlines())
+	metrics = {}
+
+	warmup_started = re.search(r"^Warmup started in:\s*(\d+)", text, re.MULTILINE)
+	if warmup_started:
+		metrics["Warmup Started (ms)"] = warmup_started.group(1)
+
+	warmup_stopped = re.search(r"^stopped in:\s*(\d+)", text, re.MULTILINE)
+	if warmup_stopped:
+		metrics["Warmup Stopped (ms)"] = warmup_stopped.group(1)
+
+	for run, value in re.findall(r"^Run (\d+) Startup took:\s*(\d+)", text, re.MULTILINE):
+		metrics[f"Startup {run} (ms)"] = value
+
+	for run, value in re.findall(r"^Run (\d+) Shutdown took:\s*(\d+)", text, re.MULTILINE):
+		metrics[f"Shutdown {run} (ms)"] = value
+
+	full_results_fields = [
+		("ACTIVE", r"^ACTIVE:\s*(\d+)"),
+		("SATISFIED", r"^SATISFIED:\s*(\d+)"),
+		("Jmap Total bundleTracker count", r"^bundleTracker count:\s*(\d+)"),
+		("Jmap Total serviceTracker count", r"^serviceTracker count:\s*(\d+)"),
+		("Jmap Total objects", r"^objects:\s*(\d+)"),
+		("Jmap Total shallow size", r"^shallow size:\s*(\d+)"),
+	]
+	for label, pattern in full_results_fields:
+		match = re.search(pattern, text, re.MULTILINE)
+		if match:
+			metrics[label] = match.group(1)
+
+	for name, value in re.findall(r"Table-([\w.\-]+?)\.csv:\s*(\d+)", text):
+		metrics[f"Table-{name}.csv"] = value
+
+	return metrics
+
+
+def find_full_results(outer_zip):
+	if "fullResults.log" not in outer_zip.namelist():
+		return {}
+
+	content = outer_zip.read("fullResults.log").decode("utf-8", errors="replace")
+	return parse_full_results(content)
+
+
 def find_phase_section(outer_zip, phase_prefix):
 	sub_zip_names = [n for n in outer_zip.namelist() if n.endswith(".zip") and os.path.basename(n).startswith(phase_prefix)]
 	if not sub_zip_names:
@@ -181,15 +230,18 @@ def process_startup_all_zip(outer_zip_path):
 	portal_version = name_match.group("revision") if name_match else "-"
 	date = get_merge_date(portal_version if name_match else None)
 
-	normal = expect = jmap = tracing = {}
+	metrics = {}
 	server = "-"
 
 	try:
 		with zipfile.ZipFile(outer_zip_path) as outer_zip:
-			normal = find_phase_section(outer_zip, "startup-normal-")
-			expect = find_phase_section(outer_zip, "startup-expect-")
-			jmap = find_phase_section(outer_zip, "startup-jmap-")
-			tracing = find_phase_section(outer_zip, "startup-profile-tracing-")
+			metrics.update(find_phase_section(outer_zip, "startup-normal-"))
+			metrics.update(find_phase_section(outer_zip, "startup-expect-"))
+			metrics.update(find_phase_section(outer_zip, "startup-jmap-"))
+			metrics.update(find_phase_section(outer_zip, "startup-profile-tracing-"))
+			# fullResults.log is the single aggregated source newer zips ship
+			# instead of per-phase cron.log; prefer it when present.
+			metrics.update(find_full_results(outer_zip))
 			server = find_server(outer_zip)
 	except (zipfile.BadZipFile, OSError) as error:
 		print(f"Warning: could not read {outer_zip_path}: {error}")
@@ -198,33 +250,33 @@ def process_startup_all_zip(outer_zip_path):
 		date,
 		portal_version,
 		server,
-		normal.get("Warmup Started (ms)", "-"),
-		normal.get("Warmup Stopped (ms)", "-"),
-		normal.get("Startup 1 (ms)", "-"),
-		normal.get("Startup 2 (ms)", "-"),
-		normal.get("Startup 3 (ms)", "-"),
-		normal.get("Startup 4 (ms)", "-"),
-		normal.get("Startup 5 (ms)", "-"),
-		normal.get("Shutdown 1 (ms)", "-"),
-		normal.get("Shutdown 2 (ms)", "-"),
-		normal.get("Shutdown 3 (ms)", "-"),
-		normal.get("Shutdown 4 (ms)", "-"),
-		normal.get("Shutdown 5 (ms)", "-"),
-		tracing.get("Table-Thread-Create.csv", "-"),
-		tracing.get("Table-File-Open.csv", "-"),
-		tracing.get("Table-SQL-Prepared-Statement-Open.csv", "-"),
-		tracing.get("Table-SQL-Prepared-Statement-Query.csv", "-"),
-		tracing.get("Table-SQL-Open.csv", "-"),
-		jmap.get("Jmap Total serviceTracker count", "-"),
-		jmap.get("Jmap Total bundleTracker count", "-"),
-		expect.get("ACTIVE", "-"),
-		expect.get("SATISFIED", "-"),
-		jmap.get("Jmap Total objects", "-"),
-		jmap.get("Jmap Total shallow size", "-"),
-		jmap.get("Jmap Total retained size", "-"),
-		tracing.get("Table-ClassNotFoundException.csv", "-"),
-		tracing.get("Table-NoSuchMethodException.csv", "-"),
-		tracing.get("Table-NoSuchFieldException.csv", "-"),
+		metrics.get("Warmup Started (ms)", "-"),
+		metrics.get("Warmup Stopped (ms)", "-"),
+		metrics.get("Startup 1 (ms)", "-"),
+		metrics.get("Startup 2 (ms)", "-"),
+		metrics.get("Startup 3 (ms)", "-"),
+		metrics.get("Startup 4 (ms)", "-"),
+		metrics.get("Startup 5 (ms)", "-"),
+		metrics.get("Shutdown 1 (ms)", "-"),
+		metrics.get("Shutdown 2 (ms)", "-"),
+		metrics.get("Shutdown 3 (ms)", "-"),
+		metrics.get("Shutdown 4 (ms)", "-"),
+		metrics.get("Shutdown 5 (ms)", "-"),
+		metrics.get("Table-Thread-Create.csv", "-"),
+		metrics.get("Table-File-Open.csv", "-"),
+		metrics.get("Table-SQL-Prepared-Statement-Open.csv", "-"),
+		metrics.get("Table-SQL-Prepared-Statement-Query.csv", "-"),
+		metrics.get("Table-SQL-Open.csv", "-"),
+		metrics.get("Jmap Total serviceTracker count", "-"),
+		metrics.get("Jmap Total bundleTracker count", "-"),
+		metrics.get("ACTIVE", "-"),
+		metrics.get("SATISFIED", "-"),
+		metrics.get("Jmap Total objects", "-"),
+		metrics.get("Jmap Total shallow size", "-"),
+		metrics.get("Jmap Total retained size", "-"),
+		metrics.get("Table-ClassNotFoundException.csv", "-"),
+		metrics.get("Table-NoSuchMethodException.csv", "-"),
+		metrics.get("Table-NoSuchFieldException.csv", "-"),
 	]
 
 
