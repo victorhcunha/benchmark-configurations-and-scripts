@@ -171,17 +171,21 @@ def extract_summary_data_from_string(log_content):
 	return results
 
 def merged_date(portal_version):
-
 	full_date = "-"
-	# url = f"https://api.github.com/repos/brianchandotcom/liferay-portal/commits/{portal_version}"
 
-	# response = requests.get(url)
-	# response.raise_for_status()
+	if portal_version:
+		try:
+			url = f"https://api.github.com/repos/brianchandotcom/liferay-portal/commits/{portal_version}"
 
-	# data = response.json()
+			response = requests.get(url)
+			response.raise_for_status()
 
-	# full_date = data["commit"]["committer"]["date"]
-	full_date = "-"
+			data = response.json()
+
+			full_date = data["commit"]["committer"]["date"]
+		except Exception as error:
+			print(f"Warning: {error}", file=sys.stderr)
+			full_date = "-"
 
 	return  {"Merged Date": full_date.split("T")[0]}
 
