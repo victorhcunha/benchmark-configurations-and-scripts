@@ -188,7 +188,17 @@ def find_full_results(outer_zip):
 		return {}
 
 	content = outer_zip.read("fullResults.log").decode("utf-8", errors="replace")
-	return parse_full_results(content)
+	metrics = parse_full_results(content)
+
+	# Older fullResults.log files only ever held the profile-call_counting
+	# Table-*.csv counts (a different scale than the tracing ones we use
+	# elsewhere) and never the startup/shutdown timings. Only trust this
+	# file once it also carries the startup results, otherwise fall back
+	# entirely to the per-phase cron.log extraction.
+	if "Startup 1 (ms)" not in metrics:
+		return {}
+
+	return metrics
 
 
 def find_phase_section(outer_zip, phase_prefix):
