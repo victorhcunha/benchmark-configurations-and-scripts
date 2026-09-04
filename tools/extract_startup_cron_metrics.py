@@ -58,7 +58,7 @@ GROUP_HEADER_ROW = [
 	"Cold Start-Shutdown - Time (ms)", "",
 	"Startup - Hot Start - Time (ms)", "", "", "", "",
 	"Shutdown - Hot Start - Time (ms)", "", "", "", "",
-	"", "", "", "", "", "", "", "", "", "", "", "", "", "",
+	"", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 ]
 
 COLUMN_HEADER_ROW = [
@@ -81,6 +81,7 @@ COLUMN_HEADER_ROW = [
 	"java.lang.ClassNotFoundException Count",
 	"java.lang.NoSuchMethodException Count",
 	"java.lang.NoSuchFieldException Count",
+	"Zip Archive File",
 ]
 
 
@@ -287,6 +288,7 @@ def process_startup_all_zip(outer_zip_path):
 		metrics.get("Table-ClassNotFoundException.csv", "-"),
 		metrics.get("Table-NoSuchMethodException.csv", "-"),
 		metrics.get("Table-NoSuchFieldException.csv", "-"),
+		filename,
 	]
 
 
